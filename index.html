@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZKP Verification</title>
+</head>
+<body>
+
+    <h1>ZKP Verification</h1>
+    <button id="bGenProof">Create Proof</button>
+    <button id="bVerifyProof">Verify Proof</button>
+
+    <pre class="proof">Proof: <code id="proof"></code></pre>
+    <pre class="proof">Result: <code id="result"></code></pre>
+
+    <script src="snarkjs.min.js">   </script>
+
+    <script>
+        const proofComponent = document.getElementById('proof');
+        const resultComponent = document.getElementById('result');
+        const bGenProof = document.getElementById("bGenProof");
+        const bVerifyProof = document.getElementById("bVerifyProof");
+
+        let proof, publicSignals;
+
+        bGenProof.addEventListener("click", async () => {
+            const input = {
+                pks: ["10", "20", "30"],
+                c: ["5", "21", "52"],
+                s: ["6", "11", "20"],
+                q: ["0", "0", "1"]
+            };
+
+            const { proof: generatedProof, publicSignals: generatedPublicSignals } = await snarkjs.groth16.fullProve(
+                input,
+                "ring-sig_js/ring-sig.wasm",
+                "ring-sig_js/ring-sig_0001.zkey"
+            );
+
+            proof = generatedProof;
+            publicSignals = generatedPublicSignals;
+
+            proofComponent.innerHTML = JSON.stringify(proof, null, 1);
+        });
+
+        bVerifyProof.addEventListener("click", async () => {
+            if (!proof || !publicSignals) {
+                resultComponent.innerHTML = "Please generate a proof first.";
+                return;
+            }
+
+            const vkey = await fetch("ring-sig_js/verification_key.json").then(res => res.json());
+
+            const res = await snarkjs.groth16.verify(vkey, publicSignals, proof);
+
+            resultComponent.innerHTML = res ? "Verification OK" : "Invalid proof";
+        });
+    </script>
+
+</body>
+</html>
